@@ -40,6 +40,10 @@ ins_l = 6;
 eye_pcb_d = 40.5; eye_view_d = 33; eye_x = 62; eye_z = 148;
 // Cadran + mouvement quartz (axe long conseillé, ≥ 8 mm de filetage utile)
 dial_z = 60; dial_d = 80; mov_sq = 56; mov_depth = 16; mov_hole = 8.2;
+// Mouvement quartz piloté par l'ESP32 + capteur Hall (DRV5032, SOT-23) dans le dos du cadran,
+// à midi ; un aimant Ø3×2 collé sous l'aiguille des minutes au même rayon sert de repère.
+hall_r = 28; hall_pk = [4.2, 3.4, 1.4];   // logement (l × h × prof.), laisse 0,6 mm de cadran
+hall_exit = [32, -20];                    // sortie des fils (repère cadran, x / vers midi)
 // Interrupteurs des jours (MTS-102, filetage M6) + LED
 days = ["L","M","M","J","V"];
 sw_hole = 6.3; sw_pitch = 26; sw_z = 12; led_d = 3.2; led_dx = 9; // LED à droite de chaque interrupteur
@@ -224,6 +228,8 @@ module body_raw() {
         }
         // axe du mouvement
         translate([0, -1, dial_z]) rotate([-90, 0, 0]) cylinder(d = mov_hole, h = fw + 2);
+        // passage des fils du capteur Hall
+        translate([hall_exit[0], -1, dial_z + hall_exit[1]]) rotate([-90, 0, 0]) cylinder(d = 3, h = fw + 2, $fn = 16);
         // interrupteurs, LED, étiquettes gravées
         for (i = [0:4]) {
             x = (i - 2) * sw_pitch;
@@ -516,6 +522,10 @@ module dial() {
     difference() {
         cylinder(d = dial_d, h = 2);
         translate([0, 0, -1]) cylinder(d = mov_hole + 0.5, h = 4);
+        // logement du capteur Hall + rainure des fils (face arrière)
+        translate([-hall_pk[0]/2, hall_r - hall_pk[1]/2, -0.01]) cube([hall_pk[0], hall_pk[1], hall_pk[2]]);
+        hull() { translate([0, hall_r, -0.01]) cylinder(d = 2, h = 1.2, $fn = 16);
+                 translate([hall_exit[0], hall_exit[1], -0.01]) cylinder(d = 2, h = 1.2, $fn = 16); }
     }
     for (h = [1:12]) {
         a = 90 - h * 30;

@@ -24,13 +24,14 @@ Visuels : `../docs/img/rendu_3d.png` (vue + coupe), `../docs/img/face_avant_mode
 | body | face avant sur le plateau ; lettres L-V gravées |
 | carriage | supports sous le bras |
 | roof_right / roof_left | à plat, face intérieure dessous |
-| dial | changement de filament à 2 mm pour les index |
+| dial | changement de filament à 2 mm pour les index ; logement du capteur Hall au dos, à midi (r = 28 mm), rainure de fils vers le trou de façade |
 | engrenages, porte, rails | couche 0,12-0,16 mm, 100 % de remplissage pour les engrenages |
 
 ## Visserie
 - Inserts laiton M3 (env. 30) + vis M3×8/10 ; vis M3 tête basse + écrou frein pour l'axe du plateau
 - Vis M2 + écrous (servos, biellette de porte)
-- Mouvement quartz **à axe long** (façade 4 mm + cadran 2 mm)
+- Mouvement quartz **pas à pas** à axe long (façade 4 mm + cadran 2 mm), modifié pour être piloté par l'ESP32
+- Aimant néodyme Ø3×2 (sous l'aiguille des minutes) + capteur Hall DRV5032 SOT-23
 
 ## Électronique — changements v0.2
 - **Supprimé** : PN532 + tags NFC (la figurine n'est plus reconnue automatiquement ; le son/l'animation se choisissent sur la page web).
