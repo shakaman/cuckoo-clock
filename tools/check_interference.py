@@ -1,44 +1,48 @@
 #!/usr/bin/env python3
 """Collision check between fixed and moving parts of hardware/coucou.scad.
 
-Exports world-placed groups for both mechanism states (open_pos = 0 and 1),
-then reports every pairwise intersection larger than 0.5 mm³.
-The pinion/carriage pair is skipped (rack and pinion mesh on purpose).
+Exports world-placed groups and reports every pairwise intersection larger
+than 0.5 mm³, for these states:
+  - figure in  (open_pos=0) with the door swept from closed to open,
+  - figure out (open_pos=1) with the door fully open.
+Skipped pairs: pinion/carriage (gears mesh) and door servo/crank (horn seated in the crank).
 
 Requires: openscad on PATH, pip install trimesh manifold3d numpy
-Usage:    python3 tools/check_interference.py      (~2-4 min)
+Usage:    python3 tools/check_interference.py      (~3-6 min)
 """
 import itertools, pathlib, subprocess, sys, tempfile
 import numpy as np, trimesh, manifold3d as m
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SCAD = ROOT / "hardware" / "coucou.scad"
+DOOR_SWEEP = [0, 20, 40, 60, 80, 100]
 
-GROUPS = {
-    "static": "body(); back_panel(); gable(true); gable(false); roof(1); roof(-1);"
-              " translate([-mov_sq/2, fw, dial_z - mov_sq/2]) cube([mov_sq, mov_depth, mov_sq]);"
-              " for (s = [-1, 1]) translate([s * eye_x, fw + 0.5, eye_z]) rotate([-90, 0, 0]) cylinder(d = eye_pcb_d - 0.5, h = 4);",
+STATIC = {
+    "case": "body(); back_panel(); face_mask(); beak();"
+            " translate([0, -2, dial_z]) rotate([90, 0, 0]) dial();"
+            " translate([-mov_sq/2, fw, dial_z - mov_sq/2]) cube([mov_sq, mov_depth, mov_sq]);"
+            " for (s = [-1, 1]) translate([s * eye_x, fw + 0.5, eye_z]) rotate([-90, 0, 0]) cylinder(d = eye_pcb_d - 0.5, h = 4);"
+            " translate([rad_x - rad_w/2, fw + 0.2, rad_z - rad_h/2]) cube([rad_w, rad_t, rad_h]);"
+            " translate([btn_x, btn_y, btn_top]) button_cap();",
     "deck": "deck();",
-    "rails": "translate([0, fw, 0]) door_rails();",
-    "dmount": "door_servo_mount(); translate([0, ds_O_y, z_ds]) rotate([90, 0, 0]) servo_model();",
+    "dservo": "door_servo_placed();",
+}
+MOVING = {
     "pinion": "translate([pin_x, pin_y, pin_O]) rotate([0, 0, 90]) servo_model();"
               " translate([pin_x, pin_y, pin_bot]) cylinder(r = gear_m * pin_teeth / 2 + gear_m, h = gear_t);",
     "carr": "translate([0, y_shaft, c_O]) carriage(); translate([0, y_shaft, c_O]) rotate([0, 0, 90]) servo_model();"
             " translate([0, y_shaft, c_O + gear_bot_l]) cylinder(r = gear_m * gear_teeth / 2 + gear_m, h = gear_t);"
             " translate([0, y_shaft - cd, c_O + gear_bot_l]) cylinder(r = gear_m * gear_teeth / 2 + gear_m, h = gear_t);"
             " translate([0, y_shaft - cd, c_O + gear_bot_l + gear_t - 1.2]) minifig_ghost();",
-    "door": "translate([0, fw + 0.2, door_z]) door();",
-    # full sweep of the door arm, whatever open_pos is
-    "darm": "for (da = [-90:15:90]) translate([0, ds_arm_y, z_ds]) rotate([-90, 0, 0]) rotate([0, 0, da]) door_arm();",
 }
-SKIP = {frozenset({"pinion", "carr"})}
+# rack/pinion mesh on purpose; the servo horn sits in the crank recess on purpose
+SKIP = {frozenset({"pinion", "carr"}), frozenset({"dservo", "crank"})}
 
 
 def library_source():
     s = SCAD.read_text()
     i = s.index("// ================================================================ SELECTION")
-    j = s.index("module roof_flat")
-    return (s[:i] + s[j:]).replace('part = "assembly";', 'part = "none";')
+    return s[:i].replace('part = "assembly";', 'part = "none";')
 
 
 def load(path):
@@ -52,22 +56,37 @@ def main():
     found = 0
     with tempfile.TemporaryDirectory() as tmp:
         tmp = pathlib.Path(tmp)
-        for pos in (0, 1):
-            meshes = {}
-            for name, code in GROUPS.items():
-                src = tmp / f"{name}.scad"
-                src.write_text(lib + "\n" + code + "\n")
-                out = tmp / f"{name}_{pos}.stl"
-                subprocess.run(["openscad", "-D", f"open_pos={pos}", "-o", str(out), str(src)],
-                               check=True, capture_output=True)
-                meshes[name] = load(out)
-            for a, b in itertools.combinations(GROUPS, 2):
+
+        def build(name, code, pos):
+            src = tmp / f"{name}.scad"
+            src.write_text(lib + "\n" + code + "\n")
+            out = tmp / f"{name}_{pos}.stl"
+            subprocess.run(["openscad", "-D", f"open_pos={pos}", "-o", str(out), str(src)],
+                           check=True, capture_output=True)
+            return load(out)
+
+        static = {k: build(k, v, 0) for k, v in STATIC.items()}
+        states = [(0, a) for a in DOOR_SWEEP] + [(1, 100)]
+        moving_cache = {}
+        for pos, ang in states:
+            if pos not in moving_cache:
+                moving_cache[pos] = {k: build(k, v, pos) for k, v in MOVING.items()}
+            groups = dict(static, **moving_cache[pos])
+            # door, crank and link, each on its own so their pin joints don't count
+            groups["door"] = build(f"door{ang}", f"door_placed({ang});", pos)
+            groups["crank"] = build(f"crank{ang}",
+                f"translate([ds_S[0], ds_S[1], crank_z]) rotate([0, 0, crank_a0 + {ang}]) door_crank();", pos)
+            groups["link"] = build(f"link{ang}",
+                f"tp = hinge + [crank_r * cos(crank_a0 + {ang}), crank_r * sin(crank_a0 + {ang})];"
+                f" translate([tp[0], tp[1], link_z]) rotate([0, 0, atan2(link_d[1], link_d[0])]) door_link();", pos)
+            for a, b in itertools.combinations(groups, 2):
                 if frozenset({a, b}) in SKIP:
                     continue
-                for piece in (meshes[a] ^ meshes[b]).decompose():
+                for piece in (groups[a] ^ groups[b]).decompose():
                     if piece.volume() > 0.5:
                         found += 1
-                        print(f"open_pos={pos}  {a} × {b}  {piece.volume():.1f} mm³  bbox={[round(v, 1) for v in piece.bounding_box()]}")
+                        print(f"open_pos={pos} door={ang}°  {a} × {b}  {piece.volume():.1f} mm³"
+                              f"  bbox={[round(v, 1) for v in piece.bounding_box()]}")
     print("OK: no interference" if not found else f"{found} interference(s)")
     sys.exit(1 if found else 0)
 

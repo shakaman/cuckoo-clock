@@ -1,6 +1,8 @@
 # Cuckoo clock
 
-A 3D-printed cuckoo alarm clock driven by an ESP32-S3, with a swappable LEGO minifigure that comes out of the door.
+A 3D-printed owl-head cuckoo alarm clock driven by an ESP32-S3, with a swappable LEGO minifigure that comes out of the door.
+
+![Front view](docs/img/front_view.png)
 
 ![3D render](docs/img/render_3d.png)
 
@@ -8,15 +10,16 @@ A 3D-printed cuckoo alarm clock driven by an ESP32-S3, with a swappable LEGO min
 - **Alarm**: wake-up time set from a web page, days armed with 5 toggle switches (Mon–Fri), never on weekends. Progressive sunrise, then the door opens, the figure comes out and turns, with sound and eye animation.
 - **ESP32-driven hands**: NTP time, automatic DST changes, catch-up after a power cut, hand animations possible.
 - **Hourly cuckoo**, muted at night (8 pm – 7 am).
-- **Controls**: rotary encoder for volume (press = snooze, long press = settings), chimney button and pull-weight to trigger the cuckoo.
+- **Controls**: rotary encoder for volume (press = snooze, long press = settings), top button and pull-weight to trigger the cuckoo.
 - **LEGO minifigure** swappable on a real 2×2 plate.
-- **2 round displays** as eyes, waking up when someone walks by (presence radar hidden behind the front face).
+- **2 round displays** as the owl's eyes: sleepy at rest, wide open on wake-up, and waking up when someone walks by (presence radar hidden behind the front face).
 
 ## Repository layout
 | Folder | Content |
 |---|---|
 | `hardware/` | parametric OpenSCAD model `coucou.scad`, print-ready STLs, [enclosure & mechanism README](hardware/README.md) |
 | `docs/` | renders, front view, [1:1 printable front template](docs/front_template_1-1.pdf) |
+| `tools/` | collision check, front view / 1:1 template / 3D render generators |
 | `firmware/` | coming next |
 
 Regenerate a part: `openscad -D 'part="body"' -o body.stl hardware/coucou.scad`
@@ -35,7 +38,7 @@ Regenerate a part: `openscad -D 'part="body"' -o body.stl hardware/coucou.scad`
 | 1 | KY-040 | volume, snooze |
 | 5 | MTS-102 toggle switches | Mon–Fri |
 | 5 | 3 mm LEDs (or WS2812) | day LEDs |
-| 1 | 12×12 tactile button | chimney |
+| 1 | 12×12 tactile button | top button |
 | 1 | Micro-switch | pull-weight |
 | 1 | **Stepping (ticking)** quartz movement, long shaft, modified | hands |
 | 1 | DRV5032 Hall sensor (SOT-23) + Ø3×2 neodymium magnet | minute-hand home mark |
@@ -43,7 +46,7 @@ Regenerate a part: `openscad -D 'part="body"' -o body.stl hardware/coucou.scad`
 | 1 | 5 V 3 A PSU + USB-C socket | power |
 | — | 1000 µF + 100 nF capacitors, 1 kΩ resistor | servo decoupling, DFPlayer RX |
 | — | LEGO 2×2 plates | minifigure bases |
-| — | ~30 M3 brass inserts, M2/M3 screws | assembly |
+| — | 12 M3 brass inserts, M2/M3 screws, Ø2 × 80 mm brass rod | assembly, door hinge |
 
 ## ESP32-S3 pinout
 | Function | GPIO |
@@ -60,7 +63,7 @@ Regenerate a part: `openscad -D 'part="body"' -o body.stl hardware/coucou.scad`
 | LD2410C TX / RX / OUT | 39 / 40 / 41 |
 | Movement coil A / B | 47 / 48 |
 
-MCP23017: Mon–Fri switches on GPA0–GPA4, pull-weight GPA5, chimney GPA6, Hall sensor GPA7.
+MCP23017: Mon–Fri switches on GPA0–GPA4, pull-weight GPA5, top button GPA6, Hall sensor GPA7.
 Servos powered straight from 5 V with 1000 µF close by.
 
 ## Timekeeping
