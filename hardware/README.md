@@ -1,52 +1,48 @@
-# Coucou LEGO — boîtier & mécanique v0.2 (style moderne)
+# LEGO Cuckoo — enclosure & mechanism v0.2 (modern style)
 
-Source paramétrique : `coucou.scad` (OpenSCAD). STL dans `stl/`, déjà orientés pour l'impression.
-Encombrement : **200 × 115 × 290 mm** (210 mm au toit, cheminée et contrepoids en plus). Toutes les pièces tiennent sur un plateau de 250 mm.
-`style = "classic"` dans le .scad redonne la version chalet (tuiles, chiffres, cœur, planches).
+Parametric source: `coucou.scad` (OpenSCAD). STLs in `stl/`, already oriented for printing.
+Footprint: **200 × 115 × 290 mm** (210 mm at the roof, plus chimney and weight). Every part fits a 250 mm bed.
+Setting `style = "classic"` in the .scad brings back the chalet version (tiles, numerals, heart, planks).
 
-Visuels : `../docs/img/rendu_3d.png` (vue + coupe), `../docs/img/face_avant_moderne.png`, `../docs/plan_face_avant_1-1.pdf` (gabarit à taille réelle).
+Visuals: `../docs/img/render_3d.png` (view + cutaway), `../docs/img/front_view.png`, `../docs/front_template_1-1.pdf` (1:1 template).
 
 ## Design
-- Façade crème à arêtes avant arrondies (R8), toit noyer épais (6 mm) sans tuiles, pente 45°.
-- Cadran anthracite Ø80 avec index blancs sans chiffres (impression bicolore), couleur d'accent orange (cheminée-bouton, trotteuse, contrepoids en gélule).
-- 2 écrans ronds en guise d'yeux, entraxe 124 mm.
-- 5 interrupteurs L-V en bas, avec la LED du jour à droite de chacun.
+- Cream front with rounded front edges (R8), thick walnut roof (6 mm) without tiles, 45° pitch.
+- Anthracite Ø80 dial with white indices and no numerals (two-colour print), orange accent colour (chimney button, second hand, capsule weight).
+- 2 round displays as eyes, 124 mm apart.
+- 5 Mon–Fri switches at the bottom, each with its day LED on the right. Labels are engraved in French (L M M J V) on purpose.
 
-## Mécanique
-- **Porte guillotine** levée par un servo logé dans le pignon (bras + biellette). Pente mini 45° pour le débattement du bras.
-- **Chariot sur glissière**, poussé par crémaillère + pignon 25 dents : 180° de servo = **39,3 mm** de course.
-- **Plateau tournant** au bout d'un bras qui passe la porte : servo embarqué + 2 engrenages 30 dents (1:1). Plaque LEGO 2×2 collée sur l'engrenage.
-- **Radar de présence LD2410C** caché derrière la façade, à gauche du cadran (glissière moulée, la carte s'insère par le haut, antenne contre la façade). Aucun perçage : les 24 GHz traversent 4 mm de PLA/PETG.
+## Mechanism
+- **Guillotine door** lifted by a servo housed in the gable (arm + link). Minimum 45° roof pitch for the arm to clear.
+- **Carriage on a slide**, driven by a rack + 25-tooth pinion: 180° of servo = **39.3 mm** of stroke.
+- **Turntable** at the end of an arm that goes through the door: onboard servo + two 30-tooth gears (1:1). The LEGO 2×2 plate is glued on the gear.
+- **LD2410C presence radar** hidden behind the front face, left of the dial (moulded slot, the board slides in from the top, antenna against the front). No hole: 24 GHz goes through 4 mm of PLA/PETG.
+- **Hands driven by the ESP32** (see the main README): Hall sensor pocket in the back of the dial at 12 o'clock (r = 28 mm), wire groove to a Ø3 hole in the front face.
 
-## Impression (PETG conseillé pour la mécanique)
-| Pièce | Notes |
+## Printing (PETG recommended for the mechanism)
+| Part | Notes |
 |---|---|
-| body | face avant sur le plateau ; lettres L-V gravées |
-| carriage | supports sous le bras |
-| roof_right / roof_left | à plat, face intérieure dessous |
-| dial | changement de filament à 2 mm pour les index ; logement du capteur Hall au dos, à midi (r = 28 mm), rainure de fils vers le trou de façade |
-| engrenages, porte, rails | couche 0,12-0,16 mm, 100 % de remplissage pour les engrenages |
+| body | front face on the bed; L–V letters engraved |
+| carriage | supports under the arm |
+| roof_right / roof_left | flat, inner face down |
+| dial | filament change at 2 mm for the indices; Hall sensor pocket on the back |
+| gears, door, rails | 0.12–0.16 mm layers, 100 % infill for the gears |
 
-## Visserie
-- Inserts laiton M3 (env. 30) + vis M3×8/10 ; vis M3 tête basse + écrou frein pour l'axe du plateau
-- Vis M2 + écrous (servos, biellette de porte)
-- Mouvement quartz **pas à pas** à axe long (façade 4 mm + cadran 2 mm), modifié pour être piloté par l'ESP32
-- Aimant néodyme Ø3×2 (sous l'aiguille des minutes) + capteur Hall DRV5032 SOT-23
+## Hardware
+- M3 brass inserts (~30) + M3×8/10 screws; low-head M3 screw + nyloc nut for the turntable axle
+- M2 screws + nuts (servos, door link)
+- **Stepping** quartz movement with a long shaft (4 mm front + 2 mm dial), modified to be driven by the ESP32
+- Ø3×2 neodymium magnet (under the minute hand) + DRV5032 SOT-23 Hall sensor
 
-## Électronique — changements v0.2
-- **Supprimé** : PN532 + tags NFC (la figurine n'est plus reconnue automatiquement ; le son/l'animation se choisissent sur la page web).
-- **Ajouté** : radar LD2410C (~4 €), 5 V, UART 256000 bauds.
-  - ESP32-S3 : LD2410C TX → GPIO 39, RX ← GPIO 40, OUT → GPIO 41.
-
-## Impact firmware
-| Servo | Rôle | Plage |
+## Firmware impact
+| Servo | Role | Range |
 |---|---|---|
-| porte | bras bas (90°) = fermé → bras haut (-90°) = ouvert | 180° |
-| crémaillère | 0° = rentré, 180° = sorti | 39,3 mm |
-| rotation | figurine, 1:1 | ±90° autour de « face » |
+| door | arm down (90°) = closed → arm up (-90°) = open | 180° |
+| rack | 0° = retracted, 180° = out | 39.3 mm |
+| rotation | figure, 1:1 | ±90° around "facing front" |
 
-- Séquence coucou : porte ouverte → chariot sort → rotation/son/yeux → rotation 0° → chariot rentre → porte fermée.
-- Radar : utiliser la cible **en mouvement** et sa distance (UART) pour réveiller les yeux seulement si quelqu'un passe à moins d'~1,5 m. Désactivé en mode nuit, temporisation avant extinction.
+- Cuckoo sequence: door opens → carriage out → rotation / sound / eyes → rotation back to 0° → carriage in → door closes.
+- Radar: use the **moving target** and its distance (UART) so the eyes only wake when someone passes within ~1.5 m. Disabled in night mode, with a timeout before switching off.
 
-## À mesurer avant impression
-Section « Composants » du .scad : servos MG90S (hauteurs), Ø du PCB des GC9A01, LD2410C (16 × 22 mm), mouvement quartz.
+## Measure before printing
+"Components" section of the .scad: MG90S servos (heights), GC9A01 PCB Ø, LD2410C (16 × 22 mm), quartz movement.
